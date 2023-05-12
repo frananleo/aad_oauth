@@ -1,61 +1,50 @@
-// Needs to be a var at the top level to get hoisted to global scope.
-// https://stackoverflow.com/questions/28776079/do-let-statements-create-properties-on-the-global-object/28776236#28776236
-var aadOauth = (function () {
-  let myMSALObj = null;
-  let authResult = null;
-  let redirectHandlerTask = null;
 
-  const tokenRequest = {
-    scopes: null,
-    prompt: null,
-    extraQueryParameters: {}
-  };
-
+class AadOauth {
   // Initialise the myMSALObj for the given client, authority and scope
- function init(config) {
-     // TODO: Add support for other MSAL configuration
-     var authData = {
-         clientId: config.clientId,
-         authority: config.isB2C ? "https://" + config.tenant + ".b2clogin.com/" + config.tenant + ".onmicrosoft.com/" + config.policy + "/" : "https://login.microsoftonline.com/" + config.tenant,
-         redirectUri: config.redirectUri,
-     };
-     var postLogoutRedirectUri = {
-         postLogoutRedirectUri: config.postLogoutRedirectUri,
-     };
-     var msalConfig = {
-         auth: config?.postLogoutRedirectUri == null ? {
-             ...authData,
-         } : {
-             ...authData,
-             ...postLogoutRedirectUri,
-         },
-         cache: {
-             cacheLocation: config.cacheLocation,
-             storeAuthStateInCookie: false,
-         },
-     };
+  init(config) {
+    // TODO: Add support for other MSAL configuration
+    var authData = {
+      clientId: config.clientId,
+      authority: config.isB2C ? "https://" + config.tenant + ".b2clogin.com/" + config.tenant + ".onmicrosoft.com/" + config.policy + "/" : "https://login.microsoftonline.com/" + config.tenant,
+      redirectUri: config.redirectUri,
+    };
+    var postLogoutRedirectUri = {
+      postLogoutRedirectUri: config.postLogoutRedirectUri,
+    };
+    var msalConfig = {
+      auth: config?.postLogoutRedirectUri == null ? {
+        ...authData,
+      } : {
+        ...authData,
+        ...postLogoutRedirectUri,
+      },
+      cache: {
+        cacheLocation: config.cacheLocation,
+        storeAuthStateInCookie: false,
+      },
+    };
 
-     if (typeof config.scope === "string") {
-         tokenRequest.scopes = config.scope.split(" ");
-     } else {
-         tokenRequest.scopes = config.scope;
-     }
+    if (typeof config.scope === "string") {
+      tokenRequest.scopes = config.scope.split(" ");
+    } else {
+      tokenRequest.scopes = config.scope;
+    }
 
-     tokenRequest.extraQueryParameters = JSON.parse(config.customParameters);
-     tokenRequest.prompt = config.prompt;
+    tokenRequest.extraQueryParameters = JSON.parse(config.customParameters);
+    tokenRequest.prompt = config.prompt;
 
-     myMSALObj = new msal.PublicClientApplication(msalConfig);
-     // Register Callbacks for Redirect flow and record the task so we
-     // can await its completion in the login API
+    myMSALObj = new msal.PublicClientApplication(msalConfig);
+    // Register Callbacks for Redirect flow and record the task so we
+    // can await its completion in the login API
 
-     redirectHandlerTask = myMSALObj.handleRedirectPromise();
- }
+    redirectHandlerTask = myMSALObj.handleRedirectPromise();
+  }
 
   // Tries to silently acquire a token. Will return null if a token
   // could not be acquired or if no cached account credentials exist.
   // Will return the authentication result on success and update the
   // global authResult variable.
-  async function silentlyAcquireToken() {
+  async silentlyAcquireToken() {
     const account = getAccount();
 
     if (account !== null && authResult === null) {
@@ -97,7 +86,7 @@ var aadOauth = (function () {
   /// if it has nearly expired. If this fails for any reason, it will then move on
   /// to attempt to refresh the token using an interactive login.
 
-  async function login(refreshIfAvailable, useRedirect, onSuccess, onError) {
+  async login(refreshIfAvailable, useRedirect, onSuccess, onError) {
     try {
       // The redirect handler task will complete with auth results if we
       // were redirected from AAD. If not, it will complete with null
@@ -119,14 +108,14 @@ var aadOauth = (function () {
     // a cached access token
     await silentlyAcquireToken()
 
-    if(authResult != null) {
+    if (authResult != null) {
       // Skip interactive login
       onSuccess(authResult.accessToken ?? null);
       return
     }
 
     const account = getAccount()
-      
+
     if (useRedirect) {
       myMSALObj.acquireTokenRedirect({
         scopes: tokenRequest.scopes,
@@ -136,7 +125,7 @@ var aadOauth = (function () {
       });
     } else {
       // Sign in with popup
-      try {        
+      try {
         const interactiveAuthResult = await myMSALObj.loginPopup({
           scopes: tokenRequest.scopes,
           prompt: tokenRequest.prompt,
@@ -155,7 +144,7 @@ var aadOauth = (function () {
     }
   }
 
-  function getAccount() {
+  getAccount() {
     // If we have recently authenticated, we use the auth'd account;
     // otherwise we fallback to using MSAL APIs to find cached auth
     // accounts in browser storage.
@@ -177,7 +166,7 @@ var aadOauth = (function () {
     }
   }
 
-  function logout(onSuccess, onError) {
+  logout(onSuccess, onError) {
     const account = getAccount();
 
     if (!account) {
@@ -194,26 +183,18 @@ var aadOauth = (function () {
       .catch(onError);
   }
 
-  async function getAccessToken() {
+  async getAccessToken() {
     await silentlyAcquireToken()
     return authResult ? authResult.accessToken : null;
   }
 
-  async function getIdToken() {
+  async getIdToken() {
     await silentlyAcquireToken()
     return authResult ? authResult.idToken : null;
   }
 
-  function hasCachedAccountInformation() {
+  hasCachedAccountInformation() {
     return getAccount() != null;
   }
 
-  return {
-    init: init,
-    login: login,
-    logout: logout,
-    getIdToken: getIdToken,
-    getAccessToken: getAccessToken,
-    hasCachedAccountInformation: hasCachedAccountInformation,
-  };
-})();
+}
