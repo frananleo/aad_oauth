@@ -1,7 +1,18 @@
+// Needs to be a var at the top level to get hoisted to global scope.
+// https://stackoverflow.com/questions/28776079/do-let-statements-create-properties-on-the-global-object/28776236#28776236
+var aadOauth = (function () {
+  let myMSALObj = null;
+  let authResult = null;
+  let redirectHandlerTask = null;
 
-class AadOauth {
+  const tokenRequest = {
+    scopes: null,
+    prompt: null,
+    extraQueryParameters: {}
+  };
+
   // Initialise the myMSALObj for the given client, authority and scope
-  init(config) {
+  function init(config) {
     // TODO: Add support for other MSAL configuration
     var authData = {
       clientId: config.clientId,
@@ -44,7 +55,7 @@ class AadOauth {
   // could not be acquired or if no cached account credentials exist.
   // Will return the authentication result on success and update the
   // global authResult variable.
-  async silentlyAcquireToken() {
+  async function silentlyAcquireToken() {
     const account = getAccount();
 
     if (account !== null && authResult === null) {
@@ -86,7 +97,7 @@ class AadOauth {
   /// if it has nearly expired. If this fails for any reason, it will then move on
   /// to attempt to refresh the token using an interactive login.
 
-  async login(refreshIfAvailable, useRedirect, onSuccess, onError) {
+  async function login(refreshIfAvailable, useRedirect, onSuccess, onError) {
     try {
       // The redirect handler task will complete with auth results if we
       // were redirected from AAD. If not, it will complete with null
@@ -144,7 +155,7 @@ class AadOauth {
     }
   }
 
-  getAccount() {
+  function getAccount() {
     // If we have recently authenticated, we use the auth'd account;
     // otherwise we fallback to using MSAL APIs to find cached auth
     // accounts in browser storage.
@@ -166,7 +177,7 @@ class AadOauth {
     }
   }
 
-  logout(onSuccess, onError) {
+  function logout(onSuccess, onError) {
     const account = getAccount();
 
     if (!account) {
@@ -183,18 +194,26 @@ class AadOauth {
       .catch(onError);
   }
 
-  async getAccessToken() {
+  async function getAccessToken() {
     await silentlyAcquireToken()
     return authResult ? authResult.accessToken : null;
   }
 
-  async getIdToken() {
+  async function getIdToken() {
     await silentlyAcquireToken()
     return authResult ? authResult.idToken : null;
   }
 
-  hasCachedAccountInformation() {
+  function hasCachedAccountInformation() {
     return getAccount() != null;
   }
 
-}
+  return {
+    init: init,
+    login: login,
+    logout: logout,
+    getIdToken: getIdToken,
+    getAccessToken: getAccessToken,
+    hasCachedAccountInformation: hasCachedAccountInformation,
+  };
+})();
