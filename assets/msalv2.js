@@ -1,31 +1,30 @@
+// Needs to be a var at the top level to get hoisted to global scope.
+// https://stackoverflow.com/questions/28776079/do-let-statements-create-properties-on-the-global-object/28776236#28776236
 
+window.aadOauth = (function () {
+  let myMSALObj = null;
+  let authResult = null;
+  let redirectHandlerTask = null;
 
-let myMSALObj = null;
-let authResult = null;
-let redirectHandlerTask = null;
-
-const tokenRequest = {
-  scopes: null,
-  prompt: null,
-  extraQueryParameters: {}
-};
-
-function newAadOauthInstance() { return new AadOauth(); }
-
-class AadOauth {
+  const tokenRequest = {
+    scopes: null,
+    prompt: null,
+    extraQueryParameters: {}
+  };
 
   // Initialise the myMSALObj for the given client, authority and scope
-  static init(config) {
+  function init(config) {
+
     // TODO: Add support for other MSAL configuration
-    var authData = {
+    let authData = {
       clientId: config.clientId,
       authority: config.isB2C ? "https://" + config.tenant + ".b2clogin.com/" + config.tenant + ".onmicrosoft.com/" + config.policy + "/" : "https://login.microsoftonline.com/" + config.tenant,
       redirectUri: config.redirectUri,
     };
-    var postLogoutRedirectUri = {
+    let postLogoutRedirectUri = {
       postLogoutRedirectUri: config.postLogoutRedirectUri,
     };
-    var msalConfig = {
+    let msalConfig = {
       auth: config?.postLogoutRedirectUri == null ? {
         ...authData,
       } : {
@@ -58,7 +57,7 @@ class AadOauth {
   // could not be acquired or if no cached account credentials exist.
   // Will return the authentication result on success and update the
   // global authResult variable.
-  static async silentlyAcquireToken() {
+  async function silentlyAcquireToken() {
     const account = getAccount();
 
     if (account !== null && authResult === null) {
@@ -100,7 +99,7 @@ class AadOauth {
   /// if it has nearly expired. If this fails for any reason, it will then move on
   /// to attempt to refresh the token using an interactive login.
 
-  static async login(refreshIfAvailable, useRedirect, onSuccess, onError) {
+  async function login(refreshIfAvailable, useRedirect, onSuccess, onError) {
     try {
       // The redirect handler task will complete with auth results if we
       // were redirected from AAD. If not, it will complete with null
@@ -158,7 +157,7 @@ class AadOauth {
     }
   }
 
-  static getAccount() {
+  function getAccount() {
     // If we have recently authenticated, we use the auth'd account;
     // otherwise we fallback to using MSAL APIs to find cached auth
     // accounts in browser storage.
@@ -180,7 +179,7 @@ class AadOauth {
     }
   }
 
-  static logout(onSuccess, onError) {
+  function logout(onSuccess, onError) {
     const account = getAccount();
 
     if (!account) {
@@ -197,18 +196,26 @@ class AadOauth {
       .catch(onError);
   }
 
-  static async getAccessToken() {
+  async function getAccessToken() {
     await silentlyAcquireToken()
     return authResult ? authResult.accessToken : null;
   }
 
-  static async getIdToken() {
+  async function getIdToken() {
     await silentlyAcquireToken()
     return authResult ? authResult.idToken : null;
   }
 
-  static hasCachedAccountInformation() {
+  function hasCachedAccountInformation() {
     return getAccount() != null;
   }
 
-}
+  return {
+    init: init,
+    login: login,
+    logout: logout,
+    getIdToken: getIdToken,
+    getAccessToken: getAccessToken,
+    hasCachedAccountInformation: hasCachedAccountInformation,
+  };
+})();

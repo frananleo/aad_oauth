@@ -1,6 +1,6 @@
 /// Microsoft identity platform authentication library.
 /// @nodoc
-@JS()
+@JS('window.aadOauth')
 library msauth;
 
 import 'dart:async';
@@ -15,45 +15,36 @@ import 'package:dartz/dartz.dart';
 import 'package:js/js.dart';
 import 'package:js/js_util.dart';
 
-@JS('newAadOauthInstance')
-external AadOauth newAadOauthInstance();
+@JS('init')
+external void jsInit(MsalConfig config);
 
-@JS('AadOauth')
-class AadOauth {
-  @JS('newInstance')
-  external static AadOauth newInstance();
+@JS('login')
+external void jsLogin(
+  bool refreshIfAvailable,
+  bool useRedirect,
+  void Function(dynamic) onSuccess,
+  void Function(dynamic) onError,
+);
 
-  @JS('init')
-  external static void jsInit(MsalConfig config);
+@JS('logout')
+external void jsLogout(
+  void Function() onSuccess,
+  void Function(dynamic) onError,
+);
 
-  @JS('login')
-  external static void jsLogin(
-    bool refreshIfAvailable,
-    bool useRedirect,
-    void Function(dynamic) onSuccess,
-    void Function(dynamic) onError,
-  );
+@JS('getAccessToken')
+external Object jsGetAccessToken();
 
-  @JS('logout')
-  external static void jsLogout(
-    void Function() onSuccess,
-    void Function(dynamic) onError,
-  );
+@JS('getIdToken')
+external Object jsGetIdToken();
 
-  @JS('getAccessToken')
-  external static Object jsGetAccessToken();
-
-  @JS('getIdToken')
-  external static Object jsGetIdToken();
-
-  @JS('hasCachedAccountInformation')
-  external static bool jsHasCachedAccountInformation();
-}
+@JS('hasCachedAccountInformation')
+external bool jsHasCachedAccountInformation();
 
 class WebOAuth extends CoreOAuth {
   final Config config;
   WebOAuth(this.config) {
-    AadOauth.jsInit(MsalConfig.construct(
+    jsInit(MsalConfig.construct(
         tenant: config.tenant,
         policy: config.policy,
         clientId: config.clientId,
@@ -75,31 +66,30 @@ class WebOAuth extends CoreOAuth {
         codeVerifier: config.codeVerifier,
         authorizationUrl: config.authorizationUrl,
         tokenUrl: config.tokenUrl,
-        cacheLocation: config.cacheLocation.value,
         customParameters: jsonEncode(config.customParameters),
         postLogoutRedirectUri: config.postLogoutRedirectUri));
   }
 
   @override
   Future<String?> getAccessToken() async {
-    return promiseToFuture(AadOauth.jsGetAccessToken());
+    return promiseToFuture(jsGetAccessToken());
   }
 
   @override
   Future<String?> getIdToken() async {
-    return promiseToFuture(AadOauth.jsGetIdToken());
+    return promiseToFuture(jsGetIdToken());
   }
 
   @override
   Future<bool> get hasCachedAccountInformation =>
-      Future<bool>.value(AadOauth.jsHasCachedAccountInformation());
+      Future<bool>.value(jsHasCachedAccountInformation());
 
   @override
   Future<Either<Failure, Token>> login(
       {bool refreshIfAvailable = false}) async {
     final completer = Completer<Either<Failure, Token>>();
 
-    AadOauth.jsLogin(
+    jsLogin(
       refreshIfAvailable,
       config.webUseRedirect,
       allowInterop(
@@ -117,7 +107,7 @@ class WebOAuth extends CoreOAuth {
   Future<void> logout() async {
     final completer = Completer<void>();
 
-    AadOauth.jsLogout(
+    jsLogout(
       allowInterop(completer.complete),
       allowInterop((error) => completer.completeError(error)),
     );
