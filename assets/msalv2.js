@@ -1,18 +1,21 @@
-// Needs to be a var at the top level to get hoisted to global scope.
-// https://stackoverflow.com/questions/28776079/do-let-statements-create-properties-on-the-global-object/28776236#28776236
-var aadOauth = (function () {
-  let myMSALObj = null;
-  let authResult = null;
-  let redirectHandlerTask = null;
 
-  const tokenRequest = {
-    scopes: null,
-    prompt: null,
-    extraQueryParameters: {}
-  };
+
+let myMSALObj = null;
+let authResult = null;
+let redirectHandlerTask = null;
+
+const tokenRequest = {
+  scopes: null,
+  prompt: null,
+  extraQueryParameters: {}
+};
+
+function newAadOauthInstance() { return new AadOauth(); }
+
+class AadOauth {
 
   // Initialise the myMSALObj for the given client, authority and scope
-  function init(config) {
+  static init(config) {
     // TODO: Add support for other MSAL configuration
     var authData = {
       clientId: config.clientId,
@@ -30,7 +33,7 @@ var aadOauth = (function () {
         ...postLogoutRedirectUri,
       },
       cache: {
-        cacheLocation: config.cacheLocation,
+        cacheLocation: "localStorage",
         storeAuthStateInCookie: false,
       },
     };
@@ -55,7 +58,7 @@ var aadOauth = (function () {
   // could not be acquired or if no cached account credentials exist.
   // Will return the authentication result on success and update the
   // global authResult variable.
-  async function silentlyAcquireToken() {
+  static async silentlyAcquireToken() {
     const account = getAccount();
 
     if (account !== null && authResult === null) {
@@ -97,7 +100,7 @@ var aadOauth = (function () {
   /// if it has nearly expired. If this fails for any reason, it will then move on
   /// to attempt to refresh the token using an interactive login.
 
-  async function login(refreshIfAvailable, useRedirect, onSuccess, onError) {
+  static async login(refreshIfAvailable, useRedirect, onSuccess, onError) {
     try {
       // The redirect handler task will complete with auth results if we
       // were redirected from AAD. If not, it will complete with null
@@ -155,7 +158,7 @@ var aadOauth = (function () {
     }
   }
 
-  function getAccount() {
+  static getAccount() {
     // If we have recently authenticated, we use the auth'd account;
     // otherwise we fallback to using MSAL APIs to find cached auth
     // accounts in browser storage.
@@ -177,7 +180,7 @@ var aadOauth = (function () {
     }
   }
 
-  function logout(onSuccess, onError) {
+  static logout(onSuccess, onError) {
     const account = getAccount();
 
     if (!account) {
@@ -194,26 +197,18 @@ var aadOauth = (function () {
       .catch(onError);
   }
 
-  async function getAccessToken() {
+  static async getAccessToken() {
     await silentlyAcquireToken()
     return authResult ? authResult.accessToken : null;
   }
 
-  async function getIdToken() {
+  static async getIdToken() {
     await silentlyAcquireToken()
     return authResult ? authResult.idToken : null;
   }
 
-  function hasCachedAccountInformation() {
+  static hasCachedAccountInformation() {
     return getAccount() != null;
   }
 
-  return {
-    init: init,
-    login: login,
-    logout: logout,
-    getIdToken: getIdToken,
-    getAccessToken: getAccessToken,
-    hasCachedAccountInformation: hasCachedAccountInformation,
-  };
-})();
+}
